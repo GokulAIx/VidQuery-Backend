@@ -21,8 +21,8 @@ proxy_password = os.getenv("WEBSHARE_PASS")
 
 ytt_api = YouTubeTranscriptApi(
     proxy_config=WebshareProxyConfig(
-        proxy_username="proxy_username",
-        proxy_password="proxy_password",
+        proxy_username="bkelohbl-rotate",
+        proxy_password="g17gf4jel844",
     )
 )
 
