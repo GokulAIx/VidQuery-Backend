@@ -1,38 +1,47 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled
-from youtube_transcript_api.proxies import WebshareProxyConfig
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
+from youtube_transcript_api.proxies import WebshareProxyConfig # Import the proxy configuration
+import os # Import the os module to access environment variables
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Or restrict to your frontend URL
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Retrieve proxy credentials from environment variables
+# Use .getenv() with a default value to avoid errors if the variable is not set
+WEBSHARE_USER = os.getenv("WEBSHARE_USER")
+WEBSHARE_PASS = os.getenv("WEBSHARE_PASS")
 
-proxy_username = os.getenv("WEBSHARE_USER")
-proxy_password = os.getenv("WEBSHARE_PASS")
-
-ytt_api = YouTubeTranscriptApi(
-    proxy_config=WebshareProxyConfig(
-        proxy_username="bkelohbl-rotate",
-        proxy_password="g17gf4jel844",
+# Initialize YouTubeTranscriptApi with Webshare proxy configuration
+# This ensures all requests made by ytt_api are routed through Webshare
+try:
+    ytt_api = YouTubeTranscriptApi(
+        proxy_config=WebshareProxyConfig(
+            proxy_username=WEBSHARE_USER,
+            proxy_password=WEBSHARE_PASS,
+        )
     )
-)
+except Exception as e:
+    # Log or handle the error appropriately if proxy configuration fails
+    print(f"Error initializing YouTubeTranscriptApi with proxy: {e}")
+    # You might want to consider how your application should behave if proxies cannot be initialized
+    # For example, raise an exception to prevent transcript requests without proxies
+    ytt_api = YouTubeTranscriptApi() # Fallback to no proxy if initialization fails
 
-@app.get("/transcript/{video_id}")
-def get_transcript(video_id: str):
+
+def Trans(video_id: str):
     try:
-        transcript_data = ytt_api.fetch(video_id)
-        final_transcript = " ".join([chunk["text"] for chunk in transcript_data])
-        return final_transcript
+        # Use the pre-configured ytt_api instance
+        transcript = ytt_api.fetch(video_id)
+        final_transcripts = " ".join(chunk.text for chunk in transcript)
+        return final_transcripts
     except TranscriptsDisabled:
         return None
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/transcript/{video_id}")
+async def get_transcript(video_id: str):
+    transcript_text = Trans(video_id)
+    if transcript_text is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Transcripts are disabled for this video."
+        )
+    return {"transcript": transcript_text}
