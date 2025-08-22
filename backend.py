@@ -17,8 +17,8 @@ def get_transcript(video_id: str):
     try:
         transcript = YouTubeTranscriptApi().fetch(video_id)
         final_transcript = " ".join(chunk.text for chunk in transcript)
-        return {"transcript": final_transcript}
+        return final_transcript
     except TranscriptsDisabled:
-        return {"transcript": None}
+        return  None
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
